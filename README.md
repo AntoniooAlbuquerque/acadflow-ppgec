@@ -1,84 +1,111 @@
-# PPGEC - Sistema de Gestão de Processos
+# AcadFlow — Módulo de Acompanhamento Acadêmico (PPGEC/UPE)
 
-Aplicação Django para gestão de processos acadêmicos do PPGEC, com perfis de acesso para alunos, docentes, coordenação e servidores.
+Sistema web de gestão de processos e indicadores acadêmicos do Programa de Pós-Graduação em Engenharia da Computação (PPGEC) da Universidade de Pernambuco (UPE), em produção em `acadflow.poli.br`.
 
-## Documentação do Projeto
+Este repositório é um fork da entrega da **Equipe E4** (Engenharia de Software – 2026.2), responsável pela concepção, desenvolvimento, testes e implantação em produção (v1.4.1) do **Módulo de Acompanhamento Acadêmico** (`acompanhamento/`).
 
-Os documentos abaixo apresentam informações necessárias para compreender, executar, manter e dar continuidade ao desenvolvimento do sistema.
+---
 
-| Documento | Descrição |
-|---|---|
-| [Documento de Negócio](docs/documento-de-negocio.md) | Apresenta o propósito do sistema, o público atendido, as funcionalidades implementadas, as regras de negócio e as evoluções realizadas durante o semestre. |
-| [Documento Técnico](docs/entrega-modulo-acompanhamento.md) | Descreve a arquitetura, as tecnologias utilizadas, a configuração do ambiente, a execução do sistema, os testes e os procedimentos técnicos. |
-| [Documento de Passagem de Conhecimento](docs/passagem-de-conhecimento.md) | Registra o estado atual do projeto, as decisões importantes, os aprendizados da equipe e as recomendações para sua continuidade. |
+## 🎯 Problema Resolvido e Valor Entregue
 
-**Documentação complementar:**
+Antes do módulo, o controle de prazos regimentais (projeto de dissertação, qualificação e defesa) e o levantamento de indicadores de desempenho de turmas e docentes eram feitos manualmente fora do sistema.
 
-- [Manual de Uso da Secretaria](docs/manual-de-uso-secretaria.md): orientações para utilização das funcionalidades do módulo de acompanhamento.
-- [Guia do Ambiente Local](docs/guia-do-ambiente-local.md): instruções detalhadas para configuração e execução do projeto em ambiente de desenvolvimento.
+O módulo integra-se ao AcadFlow para centralizar:
+- **Monitoramento de Prazos:** Cálculo dinâmico de regularidade considerando prorrogações, trancamentos, conceitos e calendário acadêmico.
+- **Alertas Automatizados:** Rotina assíncrona diária (às 7h) para notificar secretaria e coordenação sobre discentes irregulares.
+- **Painéis Gerenciais e BI:** Indicadores de sucesso por turma, tramitação de processos, distribuição docente e desempenho por orientador.
+- **Exportação de Dados:** Geração de planilhas Excel filtradas com auditoria de acesso.
 
-## Requisitos
+---
 
-- Python 3.12+
-- Conda (ambiente `ppgec`)
+## 👨‍💻 Minhas Contribuições no Projeto
 
-## Instalação
+Atuei na Equipe E4 como **Especialista BI & Desenvolvedor Backend**, contribuindo na modelagem dos indicadores gerenciais, regras de negócio em Python/Django e testes automatizados:
 
+- **Serviço de Previsão de Conclusão por Orientador (`acompanhamento/previsao_conclusao.py`):**
+  - Implementação da lógica de cálculo de previsão de defesa para discentes ativos por orientador e nível (Mestrado/Doutorado), integrando prorrogações, trancamentos e conversão dinâmica de datas em semestres letivos via `MarcoCalendario`.
+  - Tratamento de casos de borda (prazos já vencidos e discentes sem data de ingresso) e criação da suíte de testes unitários isolados (`test_previsao_conclusao.py`).
+- **Consistência Matemática em Indicadores (`acompanhamento/servicos.py`):**
+  - Refinamento do cálculo de percentuais no **Painel de Sucesso por Turma** (`calcular_painel_sucesso_turma`), implementando redistribuição determinística de resíduos de arredondamento para garantir fechamento exato em `100,0%` nas categorias principais e consistência na subdivisão entre ativos regulares e irregulares.
+  - Cobertura de testes automatizados para cenários de dízimas periódicas e empates (`test_painel_sucesso_turma.py`).
+- **Indicadores Acadêmicos e Documentação Técnica:**
+  - Definição de métricas gerenciais junto à coordenação/secretaria e elaboração da documentação técnica, regras de negócio e passagem de conhecimento do módulo (`docs/`).
+- **Fluxo Colaborativo & Qualidade:**
+  - Desenvolvimento orientado a Pull Requests com commits convencionais, revisão de código entre pares e validação via suíte de testes Django (`270+` testes automatizados).
+
+---
+
+## 🛠️ Stack Tecnológica
+
+- **Backend:** Python 3.11 / 3.12, Django 5.2
+- **Banco de Dados:** PostgreSQL 16 (produção/CI) e SQLite (desenvolvimento local)
+- **Processamento Assíncrono:** Celery 5.4, Redis 6.1, Kombu 5.6
+- **Relatórios e Armazenamento:** OpenPyXL, WhiteNoise, Django Storages (AWS S3)
+- **Infraestrutura e CI/CD:** Docker, Docker Compose, Gunicorn, GitHub Actions (CI e Ensaio de Produção)
+
+---
+
+## 🏗️ Arquitetura do Módulo
+
+O módulo foi construído como um aplicativo Django desacoplado (`acompanhamento/`), controlado por *feature flags* (`ACOMPANHAMENTO_ATIVO` e `ACOMPANHAMENTO_AVISO_ATIVO`) para ativação segura em produção sem impacto nas rotas preexistentes:
+
+```text
+acompanhamento/
+├── models.py               # Calendário de marcos, avisos e logs de auditoria
+├── situacao.py             # Motor centralizado de cálculo de prazos e regularidade
+├── previsao_conclusao.py   # Cálculo de previsão de conclusão por orientador
+├── servicos.py             # Agregações e indicadores dos painéis gerenciais
+├── lista_alunos.py         # Preparação de listagens e cartões de alerta
+├── planilha_alunos.py      # Exportação de relatórios em Excel (.xlsx)
+├── avisos.py & tasks.py    # Processamento e agendamento Celery de e-mails diários
+├── permissoes.py           # Controle de acesso baseado nos papéis do PPGEC
+└── tests/                  # Suíte completa de testes unitários e de integração
+```
+
+---
+
+## 🚀 Como Executar Localmente
+
+### 1. Clonar e configurar o ambiente virtual
 ```bash
-conda create -n ppgec python=3.12 -y
-conda activate ppgec
+git clone https://github.com/AntoniooAlbuquerque/acadflow-ppgec.git
+cd acadflow-ppgec
+python -m venv .venv
+source .venv/bin/activate  # No Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Configuração do ambiente
-
-O projeto lê variáveis do arquivo `.env`. Um arquivo local de desenvolvimento já pode ser usado diretamente; para recriar a partir do exemplo:
-
+### 2. Configurar variáveis de ambiente
 ```bash
 cp .env.example .env
 ```
-
-Principais variáveis para Postgres:
-
+Para desenvolvimento rápido com SQLite local, garanta que no `.env` conste:
 ```env
-USE_POSTGRES=True
-POSTGRES_DB=ppgec
-POSTGRES_USER=ppgec
-POSTGRES_PASSWORD=ppgec_dev_password
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+DEBUG=True
+USE_POSTGRES=False
+ACOMPANHAMENTO_ATIVO=True
 ```
 
-## Executar localmente
-
+### 3. Aplicar migrations, gerar dados fictícios e iniciar
 ```bash
-docker compose up -d db redis pgadmin
-conda run -n ppgec python manage.py migrate
-conda run -n ppgec python manage.py runserver
+python manage.py migrate
+python manage.py gerar_dados_ficticios --semente 42
+python manage.py runserver
 ```
+Acesse `http://localhost:8000/acompanhamento/`.
 
-O pgAdmin fica disponível em `http://localhost:5050`. Para conectar ao banco pelo pgAdmin, use:
-
-- Host: `db`
-- Porta: `5432`
-- Database: valor de `POSTGRES_DB`
-- Usuário: valor de `POSTGRES_USER`
-- Senha: valor de `POSTGRES_PASSWORD`
-
-Para voltar temporariamente ao SQLite local, defina `USE_POSTGRES=False` no `.env`.
-
-## Estrutura principal
-
-- `ppgec/`: configurações do projeto Django (settings, urls, wsgi/asgi)
-- `processos/`: app principal (models, views, forms, migrations, admin)
-- `templates/`: templates HTML
-- `static/`: arquivos estáticos
-
-## Comandos úteis
-
+### 4. Executar testes automatizados
 ```bash
-conda run -n ppgec python manage.py makemigrations
-conda run -n ppgec python manage.py migrate
-conda run -n ppgec python manage.py createsuperuser
-conda run -n ppgec python manage.py check
+python manage.py test acompanhamento
 ```
+
+---
+
+## 📚 Documentação Completa
+
+Toda a documentação de engenharia produzida pela equipe está disponível no diretório `docs/`:
+- [Documento de Negócio](docs/documento-de-negocio.md) — Regras acadêmicas, requisitos e indicadores.
+- [Documento Técnico](docs/entrega-modulo-acompanhamento.md) — Arquitetura, infraestrutura, CI/CD e deploy.
+- [Passagem de Conhecimento](docs/passagem-de-conhecimento.md) — Decisões arquiteturais e guia de continuidade.
+- [Manual de Uso da Secretaria](docs/manual-de-uso-secretaria.md) — Guia operacional para usuários finais.
+- [Guia do Ambiente Local](docs/guia-do-ambiente-local.md) — Setup detalhado com PostgreSQL, Redis e Docker.
